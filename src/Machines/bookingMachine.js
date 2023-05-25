@@ -34,7 +34,6 @@ const fillCountries = {
     },
   },
 };
-
 const bookingMachine = createMachine(
   {
     id: 'buy plane tickets',
@@ -84,7 +83,10 @@ const bookingMachine = createMachine(
       },
       passengers: {
         on: {
-          DONE: 'tickets',
+          DONE: {
+            target: 'tickets',
+            cond: 'moreThanOnePassenger',
+          },
           CANCEL: {
             target: 'initial',
             actions: 'cleanContext',
@@ -113,7 +115,11 @@ const bookingMachine = createMachine(
       cleanContextPassengers: assign({
         passangers: [],
       }),
-      showGratitude: () => {},
+    },
+    guards: {
+      moreThanOnePassenger: (context) => {
+        return context.passangers.length > 0;
+      },
     },
   }
 );
