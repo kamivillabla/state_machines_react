@@ -1,4 +1,39 @@
 import { assign, createMachine } from 'xstate';
+import { fetchCountries } from '../Utils/api';
+
+// maquina hija de search
+const fillCountries = {
+  initial: 'loading',
+  states: {
+    loading: {
+      // invoca un servicio
+      invoke: {
+        id: 'getCountries',
+        // la función que llamamos en el servicio
+        src: () => fetchCountries,
+        // cuando finalice exitosamente
+        onDone: {
+          target: 'success',
+          actions: assign({
+            countries: (contex, event) => event.data,
+          }),
+        },
+        onError: {
+          target: 'failure',
+          actions: assign({
+            error: 'Fallo el request',
+          }),
+        },
+      },
+    },
+    success: {},
+    failure: {
+      on: {
+        RETRY: { target: 'loading' },
+      },
+    },
+  },
+};
 
 const bookingMachine = createMachine(
   {
@@ -7,6 +42,8 @@ const bookingMachine = createMachine(
     context: {
       passangers: [],
       selectedCountry: '',
+      countries: [],
+      error: '',
     },
     states: {
       initial: {
@@ -29,16 +66,19 @@ const bookingMachine = createMachine(
             actions: 'CleanContext',
           },
         },
+        ...fillCountries,
       },
       tickets: {
+        after: {
+          5000: {
+            target: 'initial',
+            actions: ['cleanContext', 'showGratitude'],
+          },
+        },
         on: {
           FINISH: {
             target: 'initial',
-            actions: 'cleanContext',
-          },
-          CANCEL: {
-            target: 'initial',
-            actions: 'cleanContext',
+            actions: ['cleanContext', 'showGratitude'],
           },
         },
       },
@@ -73,9 +113,7 @@ const bookingMachine = createMachine(
       cleanContextPassengers: assign({
         passangers: [],
       }),
-      listado: assign({
-        passangers: (context, event) => event.passangers,
-      }),
+      showGratitude: () => {},
     },
   }
 );
